@@ -81,7 +81,7 @@ if (System.getProperty("tests.coverage")) {
   }
 
   // Attach code coverage report task to Gradle check task
-  project.getTasks().named(JavaBasePlugin.CHECK_TASK_NAME, "runServerTests").configure {
+  project.getTasks().named(JavaBasePlugin.CHECK_TASK_NAME).configure {
     dependsOn(
       tasks.named('testCodeCoverageReport', JacocoReport),
       tasks.named('testCodeCoverageReportInternalClusterTest', JacocoReport),
