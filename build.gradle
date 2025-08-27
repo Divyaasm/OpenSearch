@@ -729,6 +729,12 @@ tasks.register('checkCompatibility', CheckCompatibilityTask) {
   description = 'Checks the compatibility with child components'
 }
 
+tasks.register('runServerTests') {
+  group = 'verification'
+  description = 'Run internalClusters tests in server module'
+  dependsOn ':server:internalClusterTest'
+}
+
 allprojects { project ->
   project.afterEvaluate {
     if (project.tasks.findByName('publishToMavenLocal')) {
