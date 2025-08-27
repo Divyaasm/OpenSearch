@@ -88,10 +88,11 @@ if (System.getProperty("tests.coverage")) {
       tasks.named('testCodeCoverageReportJavaRestTest', JacocoReport)
     )
   }
-  project.getTasks().named(":server:internalClusterTest").configure {
-    dependsOn(
-      tasks.named('testCodeCoverageReportInternalClusterTest', JacocoReport),
-      tasks.named('testCodeCoverageReportJavaRestTest', JacocoReport)
-    )
+  project.(":server"){
+    tasks.named("internalClusterTest").configure {
+      dependsOn(
+        tasks.named('testCodeCoverageReportInternalClusterTest', JacocoReport),
+      )
+    }
   }
 }
