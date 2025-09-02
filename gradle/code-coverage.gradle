@@ -68,26 +68,14 @@ allprojects {
 if (System.getProperty("tests.coverage")) {
   reporting {
     reports {
-      testCodeCoverageReport(JacocoCoverageReport) {
-        testSuiteName = "test"
-      }
       testCodeCoverageReportInternalClusterTest(JacocoCoverageReport) {
         testSuiteName = "internalClusterTest"
-      }
-      testCodeCoverageReportJavaRestTest(JacocoCoverageReport) {
-        testSuiteName = "javaRestTest"
       }
     }
   }
 
   // Attach code coverage report task to Gradle check task
-  project.getTasks().named(JavaBasePlugin.CHECK_TASK_NAME).configure {
-    dependsOn(
-      tasks.named('testCodeCoverageReport', JacocoReport),
-      tasks.named('testCodeCoverageReportInternalClusterTest', JacocoReport),
-      tasks.named('testCodeCoverageReportJavaRestTest', JacocoReport)
-    )
-  }
+
   afterEvaluate {
     project.getTasks().named('runServerTests').configure {
       dependsOn(
