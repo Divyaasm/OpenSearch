@@ -368,6 +368,10 @@ tasks.named("filepermissions").configure {
   mustRunAfter("generateProto")
 }
 
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestReport')
+}
+
 tasks.named("licenseHeaders").configure {
     dependsOn("generateProto")
     // Ignore our vendored version of Google Guice
