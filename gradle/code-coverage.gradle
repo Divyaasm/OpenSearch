@@ -38,7 +38,7 @@ project(':server') {
   plugins.withId('jacoco') {
     tasks.register('jacocoUnitTestReport', JacocoReport) {
       dependsOn tasks.named('test')
-      executionData tasks.named('test')
+      executionData fileTree(dir: "$buildDir/jacoco", include: "test.exec")
       sourceSets sourceSets.main
       reports {
         xml.required = true
@@ -48,7 +48,7 @@ project(':server') {
 
     tasks.register('jacocoIntegrationTestReport', JacocoReport) {
       dependsOn tasks.named('internalClusterTest')
-      executionData tasks.named('internalClusterTest')
+      executionData fileTree(dir: "$buildDir/jacoco", include: "internalClusterTest.exec")
       sourceSets sourceSets.main
       reports {
         xml.required = true
