@@ -34,6 +34,34 @@ tasks.withType(JacocoReport).configureEach {
   }
 }
 
+project(':server') {
+  plugins.withId('jacoco') {
+    tasks.register('jacocoUnitTestReport', JacocoReport) {
+      dependsOn tasks.named('test')
+      executionData tasks.named('test')
+      sourceSets sourceSets.main
+      reports {
+        xml.required = true
+        xml.outputLocation = file("$buildDir/reports/jacoco/server-unit-tests.xml")
+      }
+    }
+
+    tasks.register('jacocoIntegrationTestReport', JacocoReport) {
+      dependsOn tasks.named('internalClusterTest')
+      executionData tasks.named('internalClusterTest')
+      sourceSets sourceSets.main
+      reports {
+        xml.required = true
+        xml.outputLocation = file("$buildDir/reports/jacoco/server-integration-tests.xml")
+      }
+    }
+
+    tasks.named('check') {
+      finalizedBy tasks.named('jacocoUnitTestReport'), tasks.named('jacocoIntegrationTestReport')
+    }
+  }
+}
+
 // Enhance jacocoTestReport task to include all test types
 allprojects {
   plugins.withId('jacoco') {

@@ -363,14 +363,19 @@ tasks.named("dependencyLicenses").configure {
         }
     }.files
 }
+tasks.named('jacocoTestReport') {
+  dependsOn tasks.withType(Test)
+}
+
+tasks.named('check') {
+  finalizedBy tasks.named('jacocoTestReport')
+}
 
 tasks.named("filepermissions").configure {
   mustRunAfter("generateProto")
 }
 
-tasks.named('check') {
-    dependsOn tasks.named('jacocoTestReport')
-}
+
 
 tasks.named("licenseHeaders").configure {
     dependsOn("generateProto")
