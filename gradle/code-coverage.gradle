@@ -56,7 +56,7 @@ project(':server') {
       }
     }
 
-    tasks.named('check') {
+    tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
       finalizedBy tasks.named('jacocoUnitTestReport'), tasks.named('jacocoIntegrationTestReport')
     }
   }
