@@ -379,16 +379,38 @@ tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
   dependsOn tasks.named('testAggregateTestReport')
 }
 
-tasks.named('jacocoTestReport') {
-  dependsOn tasks.withType(Test)
-}
-
-tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
-  finalizedBy tasks.named('jacocoTestReport')
-}
-
 tasks.named("filepermissions").configure {
   mustRunAfter("generateProto")
+}
+
+project(':server') {
+  plugins.withId('jacoco') {
+    tasks.register('jacocoUnitTestReport', JacocoReport) {
+      dependsOn tasks.named('test')
+      executionData fileTree(buildDir.absolutePath + "/jacoco").include("test.exec")
+      sourceDirectories.setFrom files(project(':server').sourceSets.main.allSource.srcDirs)
+      classDirectories.setFrom(files(sourceSets.main.output).filter { it.exists() })
+      reports {
+        xml.required = true
+        xml.outputLocation = file("$buildDir/reports/jacoco/server-unit-tests.xml")
+      }
+    }
+
+    tasks.register('jacocoIntegrationTestReport', JacocoReport) {
+      dependsOn tasks.named('internalClusterTest')
+      executionData fileTree(buildDir.absolutePath + "/jacoco").include("internalClusterTest.exec")
+      classDirectories.setFrom(files(sourceSets.main.output).filter { it.exists() })
+
+      reports {
+        xml.required = true
+        xml.outputLocation = file("$buildDir/reports/jacoco/server-integration-tests.xml")
+      }
+    }
+
+    tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
+      dependsOn (tasks.named('jacocoUnitTestReport'), tasks.named('jacocoIntegrationTestReport'))
+    }
+  }
 }
 
 
