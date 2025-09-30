@@ -364,51 +364,46 @@ tasks.named("dependencyLicenses").configure {
         }
     }.files
 }
-reporting {
-  reports {
-    testAggregateTestReport(AggregateTestReport) {
-      testSuiteName = "server-tests"
+if (System.getProperty("moduletests.coverage")) {
+  reporting {
+    reports {
+      testAggregateTestReport(AggregateTestReport) {
+        testSuiteName = "test"
+      }
     }
   }
+  tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
+    dependsOn tasks.named('testAggregateTestReport')
+  }
 }
-
-tasks.named('testAggregateTestReport') {
-  testResults.from(tasks.withType(Test))
-}
-tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
-  dependsOn tasks.named('testAggregateTestReport')
-}
-
 tasks.named("filepermissions").configure {
   mustRunAfter("generateProto")
 }
 
-project(':server') {
+if (System.getProperty("moduletests.coverage")) {
   plugins.withId('jacoco') {
-    tasks.register('jacocoUnitTestReport', JacocoReport) {
+    tasks.register('testCodeCoverageReport', JacocoReport) {
       dependsOn tasks.named('test')
       executionData fileTree(buildDir.absolutePath + "/jacoco").include("test.exec")
       sourceDirectories.setFrom files(project(':server').sourceSets.main.allSource.srcDirs)
       classDirectories.setFrom(files(sourceSets.main.output).filter { it.exists() })
       reports {
         xml.required = true
-        xml.outputLocation = file("$buildDir/reports/jacoco/server-unit-tests.xml")
       }
     }
 
-    tasks.register('jacocoIntegrationTestReport', JacocoReport) {
+    tasks.register('testCodeCoverageReportInternalClusterTest', JacocoReport) {
       dependsOn tasks.named('internalClusterTest')
       executionData fileTree(buildDir.absolutePath + "/jacoco").include("internalClusterTest.exec")
       classDirectories.setFrom(files(sourceSets.main.output).filter { it.exists() })
 
       reports {
         xml.required = true
-        xml.outputLocation = file("$buildDir/reports/jacoco/server-integration-tests.xml")
       }
     }
 
     tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
-      dependsOn (tasks.named('jacocoUnitTestReport'), tasks.named('jacocoIntegrationTestReport'))
+      dependsOn (tasks.named('testCodeCoverageReport'), tasks.named('testCodeCoverageReportInternalClusterTest'))
     }
   }
 }
