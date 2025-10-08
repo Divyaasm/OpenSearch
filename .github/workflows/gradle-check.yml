@@ -27,7 +27,6 @@ jobs:
       with:
         files_ignore: |
           release-notes/*.md
-          .github/**
           *.md
 
   gradle-check:
