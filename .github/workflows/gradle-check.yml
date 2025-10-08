@@ -2,8 +2,7 @@ name: Gradle Check (Jenkins)
 on:
   pull_request:
     branches:
-      - main
-      - addcoverage
+      - '*'
 
   pull_request_target:
     types: [opened, synchronize, reopened]
