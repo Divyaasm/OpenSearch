@@ -33,7 +33,7 @@ jobs:
 
   gradle-check:
     needs: check-files
-    if: github.repository == 'opensearch-project/OpenSearch' && needs.check-files.outputs.RUN_GRADLE_CHECK == 'true'
+    if: github.repository == 'Divyaasm/OpenSearch' && needs.check-files.outputs.RUN_GRADLE_CHECK == 'true'
     permissions:
       contents: read # to fetch code (actions/checkout)
       pull-requests: write # to create or update comment (peter-evans/create-or-update-comment)
@@ -95,15 +95,15 @@ jobs:
       - name: Checkout opensearch-build repo
         uses: actions/checkout@v5
         with:
-          repository: opensearch-project/opensearch-build
-          ref: main
+          repository: Divyaasm/opensearch-build
+          ref: updatelib
           path: opensearch-build
 
       - name: Trigger jenkins workflow to run gradle check
         run: |
           set -e
           set -o pipefail
-          bash opensearch-build/scripts/gradle/gradle-check.sh -t ${{ secrets.JENKINS_GRADLE_CHECK_GENERIC_WEBHOOK_TOKEN }} -u ${{ secrets.JENKINS_GITHUB_USER}} -p ${{ secrets.JENKINS_GITHUB_USER_TOKEN}} | tee -a gradle-check.log
+          bash opensearch-build/scripts/gradle/gradle-check.sh -t ${{ secrets.JENKINS_GRADLE_CHECK_GENERIC_WEBHOOK_TOKEN }} | tee -a gradle-check.log
 
       - name: Setup Result Status
         if: always()
@@ -118,7 +118,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./codeCoverage.xml
+          files: ./testCodeCoverageReport.xml
 
       - name: Create Comment Success
         if: ${{ github.event_name == 'pull_request_target' && success() && env.result == 'SUCCESS' }}
