@@ -1,10 +1,9 @@
 name: Gradle Check (Jenkins)
 on:
-  push:
-    branches-ignore:
-      - 'backport/**'
-      - 'create-pull-request/**'
-      - 'dependabot/**'
+  pull_request:
+    branches:
+      - '*'
+
   pull_request_target:
     types: [opened, synchronize, reopened]
 
@@ -28,12 +27,11 @@ jobs:
       with:
         files_ignore: |
           release-notes/*.md
-          .github/**
           *.md
 
   gradle-check:
     needs: check-files
-    if: github.repository == 'opensearch-project/OpenSearch' && needs.check-files.outputs.RUN_GRADLE_CHECK == 'true'
+    if: github.repository == 'Divyaasm/OpenSearch' && needs.check-files.outputs.RUN_GRADLE_CHECK == 'true'
     permissions:
       contents: read # to fetch code (actions/checkout)
       pull-requests: write # to create or update comment (peter-evans/create-or-update-comment)
@@ -59,6 +57,7 @@ jobs:
           echo "pr_owner=$(jq --raw-output .pull_request.user.login $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "pr_or_commit_description=$(jq --ascii-output .pull_request.body $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "post_merge_action=false" >> $GITHUB_ENV
+          echo "module_name=server" >> $GITHUB_ENV
 
       # to get the PR data that can be used for post merge actions
       - uses: actions/github-script@v7
@@ -91,19 +90,20 @@ jobs:
           echo 'pr_number=${{ fromJson(steps.get_pr_data.outputs.result).number }}' >> $GITHUB_ENV
           echo "pr_or_commit_description=$(jq --ascii-output .head_commit.message $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "post_merge_action=true" >> $GITHUB_ENV
+          echo "module_name=server" >> $GITHUB_ENV
 
       - name: Checkout opensearch-build repo
         uses: actions/checkout@v5
         with:
-          repository: opensearch-project/opensearch-build
-          ref: main
+          repository: Divyaasm/opensearch-build
+          ref: updatelib
           path: opensearch-build
 
       - name: Trigger jenkins workflow to run gradle check
         run: |
           set -e
           set -o pipefail
-          bash opensearch-build/scripts/gradle/gradle-check.sh -t ${{ secrets.JENKINS_GRADLE_CHECK_GENERIC_WEBHOOK_TOKEN }} -u ${{ secrets.JENKINS_GITHUB_USER}} -p ${{ secrets.JENKINS_GITHUB_USER_TOKEN}} | tee -a gradle-check.log
+          bash opensearch-build/scripts/gradle/gradle-check.sh ${{ secrets.JENKINS_GRADLE_CHECK_GENERIC_WEBHOOK_TOKEN }} | tee -a gradle-check.log
 
       - name: Setup Result Status
         if: always()
@@ -118,11 +118,11 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./codeCoverage.xml
+          files: ./testCodeCoverageReport.xml
 
       - name: Create Comment Success
         if: ${{ github.event_name == 'pull_request_target' && success() && env.result == 'SUCCESS' }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ env.pr_number }}
           body: |
@@ -145,7 +145,7 @@ jobs:
 
       - name: Create Comment Flaky
         if: ${{ github.event_name == 'pull_request_target' && success() && env.result != 'SUCCESS' }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ env.pr_number }}
           body: |
@@ -155,7 +155,7 @@ jobs:
 
       - name: Create Comment Failure
         if: ${{ github.event_name == 'pull_request_target' && failure() }}
-        uses: peter-evans/create-or-update-comment@v5
+        uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ env.pr_number }}
           body: |
