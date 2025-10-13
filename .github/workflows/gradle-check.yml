@@ -57,6 +57,7 @@ jobs:
           echo "pr_owner=$(jq --raw-output .pull_request.user.login $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "pr_or_commit_description=$(jq --ascii-output .pull_request.body $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "post_merge_action=false" >> $GITHUB_ENV
+          echo "module_name=server" >> $GITHUB_ENV
 
       # to get the PR data that can be used for post merge actions
       - uses: actions/github-script@v7
@@ -89,6 +90,7 @@ jobs:
           echo 'pr_number=${{ fromJson(steps.get_pr_data.outputs.result).number }}' >> $GITHUB_ENV
           echo "pr_or_commit_description=$(jq --ascii-output .head_commit.message $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "post_merge_action=true" >> $GITHUB_ENV
+          echo "module_name=server" >> $GITHUB_ENV
 
       - name: Checkout opensearch-build repo
         uses: actions/checkout@v5
