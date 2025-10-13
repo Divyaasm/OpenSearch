@@ -1,10 +1,9 @@
 name: Gradle Check (Jenkins)
 on:
-  push:
-    branches-ignore:
-      - 'backport/**'
-      - 'create-pull-request/**'
-      - 'dependabot/**'
+  pull_request:
+    branches:
+      - '*'
+
   pull_request_target:
     types: [opened, synchronize, reopened]
 
@@ -28,18 +27,22 @@ jobs:
       with:
         files_ignore: |
           release-notes/*.md
-          .github/**
           *.md
 
   gradle-check:
     needs: check-files
-    if: github.repository == 'opensearch-project/OpenSearch' && needs.check-files.outputs.RUN_GRADLE_CHECK == 'true'
+    if: github.repository == 'Divyaasm/OpenSearch' && needs.check-files.outputs.RUN_GRADLE_CHECK == 'true'
     permissions:
       contents: read # to fetch code (actions/checkout)
       pull-requests: write # to create or update comment (peter-evans/create-or-update-comment)
       issues: write # To create an issue if check fails on push.
     runs-on: ubuntu-latest
     timeout-minutes: 130
+
+    strategy:
+      fail-fast: false
+      matrix:
+        module_name: [server, non-server]
     steps:
       - name: Checkout OpenSearch repo
         uses: actions/checkout@v5
@@ -59,6 +62,7 @@ jobs:
           echo "pr_owner=$(jq --raw-output .pull_request.user.login $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "pr_or_commit_description=$(jq --ascii-output .pull_request.body $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "post_merge_action=false" >> $GITHUB_ENV
+          echo "module_name=${{ matrix.module_name }}" >> $GITHUB_ENV
 
       # to get the PR data that can be used for post merge actions
       - uses: actions/github-script@v7
@@ -91,19 +95,20 @@ jobs:
           echo 'pr_number=${{ fromJson(steps.get_pr_data.outputs.result).number }}' >> $GITHUB_ENV
           echo "pr_or_commit_description=$(jq --ascii-output .head_commit.message $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
           echo "post_merge_action=true" >> $GITHUB_ENV
+          echo "module_name=${{ matrix.module_name }}" >> $GITHUB_ENV
 
       - name: Checkout opensearch-build repo
         uses: actions/checkout@v5
         with:
-          repository: opensearch-project/opensearch-build
-          ref: main
+          repository: Divyaasm/opensearch-build
+          ref: updatelib
           path: opensearch-build
 
-      - name: Trigger jenkins workflow to run gradle check
+      - name: Trigger jenkins workflow for ${{ matrix.module_name }}
         run: |
           set -e
           set -o pipefail
-          bash opensearch-build/scripts/gradle/gradle-check.sh -t ${{ secrets.JENKINS_GRADLE_CHECK_GENERIC_WEBHOOK_TOKEN }} -u ${{ secrets.JENKINS_GITHUB_USER}} -p ${{ secrets.JENKINS_GITHUB_USER_TOKEN}} | tee -a gradle-check.log
+          bash opensearch-build/scripts/gradle/gradle-check.sh ${{ secrets.JENKINS_GRADLE_CHECK_GENERIC_WEBHOOK_TOKEN }} | tee -a gradle-check.log
 
       - name: Setup Result Status
         if: always()
@@ -113,20 +118,23 @@ jobs:
           echo "workflow_url=$WORKFLOW_URL" >> $GITHUB_ENV
           echo "result=$RESULT" >> $GITHUB_ENV
 
-      - name: Upload Coverage Report
+      - name: Upload Coverage Report for Unit Tests
         if: success()
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./codeCoverage.xml
+          files: codeCoverage/testCodeCoverageReport.xml
+          flags: unit
+          name: unit-tests
 
-      - name: Create Comment Success
-        if: ${{ github.event_name == 'pull_request_target' && success() && env.result == 'SUCCESS' }}
-        uses: peter-evans/create-or-update-comment@v5
+      - name: Upload Coverage Report for Integration Tests
+        if: success()
+        uses: codecov/codecov-action@v5
         with:
-          issue-number: ${{ env.pr_number }}
-          body: |
-            :white_check_mark: Gradle check result for ${{ env.pr_from_sha }}: [${{ env.result }}](${{ env.workflow_url }})
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: codeCoverage/*Test.xml
+          flags: integration
+          name: unit-tests
 
       - name: Extract Test Failure
         if: ${{ github.event_name == 'pull_request_target' && env.result != 'SUCCESS' }}
@@ -143,25 +151,33 @@ jobs:
             echo "EOF" >> $GITHUB_ENV
           fi
 
-      - name: Create Comment Flaky
-        if: ${{ github.event_name == 'pull_request_target' && success() && env.result != 'SUCCESS' }}
-        uses: peter-evans/create-or-update-comment@v5
-        with:
-          issue-number: ${{ env.pr_number }}
-          body: |
-            :grey_exclamation: Gradle check result for ${{ env.pr_from_sha }}: [${{ env.result }}](${{ env.workflow_url }}) ${{ env.test_failures }}
 
-            Please review all [flaky tests](https://github.com/opensearch-project/OpenSearch/blob/main/DEVELOPER_GUIDE.md#flaky-tests) that succeeded after retry and create an issue if one does not already exist to track the flaky failure.
-
-      - name: Create Comment Failure
-        if: ${{ github.event_name == 'pull_request_target' && failure() }}
-        uses: peter-evans/create-or-update-comment@v5
-        with:
-          issue-number: ${{ env.pr_number }}
-          body: |
-            :x: Gradle check result for ${{ env.pr_from_sha }}: [${{ env.result }}](${{ env.workflow_url }})
-
-            Please examine the workflow log, locate, and copy-paste the failure(s) below, then iterate to green. Is the failure [a flaky test](https://github.com/opensearch-project/OpenSearch/blob/main/DEVELOPER_GUIDE.md#flaky-tests) unrelated to your change?
+  #  create comment:
+#    needs: gradle-check
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Generate comment for the test results
+#        run: |
+#          COMMENT="### Gradle Check Test Results\n\n"
+#          for module in server non-server; do
+#            LOG="gradle-check-${module}.log"
+#            if [[ -f "$LOG" ]]; then
+#              WORKFLOW_URL=$(grep 'WORKFLOW_URL' $LOG | awk '{print $2}' || echo "N/A")
+#              RESULT=$(grep 'Result:' $LOG | awk '{print $2}' || echo "FAILURE")
+#
+#              COMMENT+="**Module: $module**\n"
+#              COMMENT+="Result: $RESULT\n"
+#              COMMENT+="Workflow: [$WORKFLOW_URL]($WORKFLOW_URL)\n"
+#            fi
+#          done
+#          echo "$COMMENT" > pr_comment.txt
+#
+#      - name: Post merged PR comment
+#        uses: peter-evans/create-or-update-comment@v4
+#        with:
+#          issue-number: ${{ github.event.pull_request.number }}
+#          body: |
+#           $(cat pr_comment.txt)
 
   check-result:
     needs: [check-files, gradle-check]
