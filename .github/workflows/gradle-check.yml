@@ -84,7 +84,7 @@ jobs:
       - name: Setup environment variables (Push)
         if: github.event_name == 'push'
         run: |
-          repo_url="https://github.com/opensearch-project/OpenSearch"
+          repo_url="https://github.com/Divyaasm/OpenSearch"
           ref_id=$(git rev-parse HEAD)
           branch_name=$(git rev-parse --abbrev-ref HEAD)
           echo "branch_name=$branch_name" >> $GITHUB_ENV
